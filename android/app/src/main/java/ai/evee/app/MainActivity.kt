@@ -263,7 +263,7 @@ private fun sendMessage(
                     messages[assistantIndex] = ChatMessage("assistant", generated.first, generated.second)
                 }
             } else {
-                streamEvee(messages.dropLast(1), provider) { chunk ->
+                streamEvee(messages.dropLast(1).dropWhile { it.role == "assistant" }, provider) { chunk ->
                     withContext(Dispatchers.Main) {
                         val current = messages[assistantIndex]
                         messages[assistantIndex] = current.copy(content = current.content + chunk)
