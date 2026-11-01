@@ -44,7 +44,7 @@ async function streamGemini(messages: ChatMessage[]) {
     parts: [{ text: m.content }]
   }));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
-  const requestBody = JSON.stringify({ contents });
+  const requestBody = JSON.stringify({\n    systemInstruction: { parts: [{ text: "You are EVEE AI, a text-based assistant. Image creation is handled by a separate image-generation service. Never claim that an image has been generated, attached, or displayed unless the application actually returns an image. If the user asks for an image but the request reaches text chat, clearly say that image generation must be requested through the image-generation feature." }] },\n    contents\n  });
   // Keep the first-token path lean: one short retry for temporary capacity errors only.
   let response = await fetch(url, {
     method: "POST",
