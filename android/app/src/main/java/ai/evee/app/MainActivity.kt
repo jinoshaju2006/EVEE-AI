@@ -1,9 +1,14 @@
 package ai.evee.app
 
 import android.os.Bundle
+import android.graphics.BitmapFactory
+import android.util.Base64
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,7 +36,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-private data class ChatMessage(val role: String, val content: String)
+private data class ChatMessage(val role: String, val content: String, val imageData: String? = null)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -221,7 +226,15 @@ private fun MessageBubble(message: ChatMessage, purple: Color, panel: Color) {
             ),
             modifier = Modifier.widthIn(max = 310.dp)
         ) {
-            Text(message.content, color = Color(0xFFF1EFFA), fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.padding(14.dp))
+            Column(Modifier.padding(14.dp)) {
+                if (message.content.isNotBlank()) Text(message.content, color = Color(0xFFF1EFFA), fontSize = 15.sp, lineHeight = 22.sp)
+                message.imageData?.let { encoded ->
+                    val bitmap = remember(encoded) {
+                        runCatching { BitmapFactory.decodeByteArray(Base64.decode(encoded, Base64.DEFAULT), 0, Base64.decode(encoded, Base64.DEFAULT).size)?.asImageBitmap() }.getOrNull()
+                    }
+                    bitmap?.let { Image(bitmap = it, contentDescription = "AI-generated image", modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentScale = ContentScale.Fit) }
+                }
+            }
         }
     }
 }
@@ -241,14 +254,22 @@ private fun sendMessage(
     setError(null)
     scope.launch {
         try {
-            streamEvee(messages.dropLast(1), provider) { chunk ->
+            val wantsImage = Regex("""\\b(generate|create|draw|make)\\b.{0,50}\\b(image|picture|illustration|artwork|wallpaper)\\b|\\b(image|picture|illustration|artwork|wallpaper)\\b.{0,50}\\b(generate|create|draw|make)\\b""", RegexOption.IGNORE_CASE).containsMatchIn(prompt)
+            if (wantsImage) {
+                val generated = generateEveeImage(prompt)
                 withContext(Dispatchers.Main) {
-                    val current = messages[assistantIndex]
-                    messages[assistantIndex] = current.copy(content = current.content + chunk)
+                    messages[assistantIndex] = ChatMessage("assistant", generated.first, generated.second)
                 }
-            }
-            if (messages[assistantIndex].content.isBlank()) {
-                messages[assistantIndex] = ChatMessage("assistant", "EVEE returned an empty response. Please try again.")
+            } else {
+                streamEvee(messages.dropLast(1), provider) { chunk ->
+                    withContext(Dispatchers.Main) {
+                        val current = messages[assistantIndex]
+                        messages[assistantIndex] = current.copy(content = current.content + chunk)
+                    }
+                }
+                if (messages[assistantIndex].content.isBlank()) {
+                    messages[assistantIndex] = ChatMessage("assistant", "EVEE returned an empty response. Please try again.")
+                }
             }
         } catch (e: Exception) {
             messages.removeAt(assistantIndex)
@@ -256,6 +277,32 @@ private fun sendMessage(
         } finally {
             setLoading(false)
         }
+    }
+}
+
+private suspend fun generateEveeImage(prompt: String): Pair<String, String> = withContext(Dispatchers.IO) {
+    val payload = JSONObject().put("prompt", prompt).put("aspectRatio", "1:1")
+    val connection = (URL("https://evee-ai-q6d9.vercel.app/api/images").openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 20000
+        readTimeout = 180000
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("Accept", "application/json")
+    }
+    try {
+        connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+        val code = connection.responseCode
+        val body = (if (code in 200..299) connection.inputStream else connection.errorStream)
+            ?.bufferedReader()?.use { it.readText() }.orEmpty()
+        val json = JSONObject(body)
+        if (code !in 200..299) throw IllegalStateException(json.optString("error", "Image generation failed ($code)."))
+        val dataUrl = json.optString("image")
+        val base64 = dataUrl.substringAfter("base64,", "")
+        if (base64.isBlank()) throw IllegalStateException("EVEE did not return an image.")
+        (json.optString("text", "Here is your generated image.") to base64)
+    } finally {
+        connection.disconnect()
     }
 }
 
