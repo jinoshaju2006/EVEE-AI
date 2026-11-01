@@ -9,9 +9,13 @@ type GeminiPart = {
   inline_data?: { mime_type?: string; data?: string };
 };
 
+const ALLOWED_RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"];
+
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, aspectRatio = "1:1" } = await req.json();
+    const body = await req.json();
+    const prompt = body?.prompt;
+    const aspectRatio = body?.aspectRatio || "1:1";
 
     if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 4000) {
       return Response.json({ error: "Enter an image prompt (maximum 4,000 characters)." }, { status: 400 });
@@ -22,25 +26,19 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Image generation is not configured. Add GEMINI_API_KEY to Vercel." }, { status: 503 });
     }
 
-    // Use Gemini's documented generateContent image-generation endpoint.
-    // This shares the same API key as EVEE chat, while keeping image generation server-side.
+    // Nano Banana 2.1 is the documented default image model.
     const model = process.env.GEMINI_IMAGE_MODEL || "gemini-nano-banana-2.1";
+    const ratio = ALLOWED_RATIOS.includes(aspectRatio) ? aspectRatio : "1:1";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": key
-        },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt.trim() }] }],
           generationConfig: {
-            responseModalities: ["IMAGE"],
-            imageConfig: {
-              aspectRatio: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"].includes(aspectRatio) ? aspectRatio : "1:1",
-              imageSize: "1K"
-            }
+            responseModalities: ["TEXT", "IMAGE"],
+            imageConfig: { aspectRatio: ratio, imageSize: "1K" }
           }
         }),
         signal: AbortSignal.timeout(180000)
@@ -71,9 +69,10 @@ export async function POST(req: NextRequest) {
 
     if (!imageData) {
       const blockReason = data.promptFeedback?.blockReason;
+      const finishReason = data.candidates?.[0]?.finishReason;
       const message = blockReason
         ? `The image request was blocked by Gemini safety filters (${blockReason}). Try a different prompt.`
-        : "Gemini returned no image. Check that the selected image model is available for this API key.";
+        : `Gemini returned no image (finish reason: ${finishReason || "unknown"}). Check model access and API quota.`;
       return Response.json({ error: message }, { status: 502 });
     }
 
