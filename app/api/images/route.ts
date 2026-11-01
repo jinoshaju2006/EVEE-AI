@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: `Gemini image error (${response.status}): ${detail.slice(0, 700)}` }, { status: response.status });
     }
     const data = JSON.parse(raw);
-    const image = data.output_image?.data || data.steps?.flatMap((s: any) => s.content || []).find((c: any) => c.type === "image")?.data;
+    const image = data.output_image?.data || data.steps?.filter((s: any) => s.type === "model_output").flatMap((s: any) => s.content || []).find((c: any) => c.type === "image")?.data;
     if (!image) return Response.json({ error: "The image model returned no image. Check that image generation is enabled for your API key." }, { status: 502 });
     return Response.json({ image: `data:image/png;base64,${image}`, text: data.output_text || "Here is your generated image." });
   } catch (error) {
