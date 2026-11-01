@@ -1,63 +1,41 @@
-# EVEE AI — Developer Setup
+# EVEE AI V2 — Developer Notes
 
 ## Run locally
 
-1. Install Node.js 20.9+ and pnpm.
-2. Open a terminal in this `EVEE-AI` directory.
-3. Install dependencies:
+Requirements: Node.js 20.9+ and pnpm.
 
 ```bash
 pnpm install
-```
-
-4. Copy the environment template and add a real provider key:
-
-```bash
 cp .env.example .env
-```
-
-Set `GEMINI_API_KEY` to a key created in Google AI Studio. Optional: set `OPENAI_API_KEY` to enable the OpenAI-compatible provider selector. Keep both keys in this server-side `.env` file only. Never paste them into client-side code or commit them.
-
-5. Start the development server:
-
-```bash
 pnpm dev
 ```
 
-6. Open http://localhost:3000.
+Configure `GEMINI_API_KEY` in the server-side `.env` file before sending text or image requests. Optionally configure `OPENAI_API_KEY`, `OPENAI_BASE_URL` and `OPENAI_MODEL` to enable the OpenAI-compatible option. Image generation uses `GEMINI_IMAGE_MODEL`. The selected model must be enabled for your Google AI account/API key.
 
-The chat API streams actual provider output. If no key is configured, the interface displays a clear configuration error instead of fabricating a response.
+Never use `NEXT_PUBLIC_*` for provider credentials. Do not commit `.env`, API keys, private database credentials or signing keys.
 
-## Database preparation
+## Current live routes
 
-The initial Prisma schema is at `prisma/schema.prisma`. Configure `DATABASE_URL` for a PostgreSQL database, then run:
+- `POST /api/chat`: provider-backed streaming chat for Gemini or OpenAI-compatible APIs.
+- `POST /api/images`: Gemini image-generation request. The handler validates inline image data and returns an error if no supported image is included.
 
-```bash
-pnpm db:generate
-pnpm db:migrate
-```
+A lightweight in-memory request limit is present. It is not a replacement for a shared Redis-backed limiter in multi-instance deployments. Current chat history is browser-local and is not authenticated, database-backed or synchronized.
 
-Database persistence and authentication are not wired into the current chat UI yet; browser-local conversation history is currently used for this first preview.
+## Production environment
 
-## Implemented in this milestone
+Set the server variables in Vercel Project Settings → Environment Variables, redeploy, and verify both text and image routes using a valid key. For PostgreSQL work, configure `DATABASE_URL`; the Prisma schema is not yet wired to the UI.
 
-- Next.js App Router + TypeScript project scaffold.
-- Responsive dark glass UI and EVEE brand treatment.
-- Working server-side Gemini streaming adapter.
-- Optional OpenAI-compatible streaming adapter.
-- Provider selector and streaming cancellation.
-- Markdown/GFM response rendering and copy action.
-- Local browser chat history.
-- Initial PostgreSQL Prisma schema.
-- PWA manifest metadata.
+## Android APK
 
-## Not implemented yet
+Run **Actions → Build EVEE AI APK → Run workflow**. Download the `EVEE-AI-Android-APK` artifact from the completed workflow run. This is a debug APK; a Play Store build needs a private signing configuration stored as GitHub Actions secrets.
 
-- Authentication and server-backed user sessions.
-- Database-backed conversation persistence.
-- File uploads, web search, plugins/MCP/OAuth.
-- Image generation, voice, memory, projects and agents.
-- Admin, subscriptions, payment processing and production deployment.
-- PWA service worker/offline support and install icons.
+## Not yet implemented
 
-These are intentionally marked as future work. Do not represent them as live features until implemented and tested.
+- Authentication / Google sign-in
+- Database-backed conversation history and user sync
+- File uploads to AI, PDF/DOCX extraction and image understanding
+- Settings, conversation rename/delete/search/edit/regenerate
+- Web search, voice, plugins and project workspace
+- Production Redis rate limits, monitoring, security review and Android device QA
+
+Only claim a capability as production-ready after its implementation and tests are complete.
