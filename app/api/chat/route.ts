@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messages = body.messages as ChatMessage[];
     const provider = body.provider === "openai" ? "openai" : "gemini";
+
     if (!Array.isArray(messages) || messages.length === 0 || messages.length > 40) {
       return Response.json({ error: "Send between 1 and 40 messages." }, { status: 400 });
     }
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
 async function streamGemini(messages: ChatMessage[]) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("Gemini is not configured. Add GEMINI_API_KEY to the server environment.");
+  // Use the currently documented, stable default instead of an old/possibly unavailable model name.
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
   const contents = messages.slice(-20).map(m => ({
     role: m.role === "assistant" ? "model" : "user",
@@ -48,7 +50,7 @@ async function streamGemini(messages: ChatMessage[]) {
     systemInstruction: { parts: [{ text: "You are EVEE AI, a helpful AI assistant. Image creation is handled by the image-generation service, not text chat. Never claim an image was generated unless the image service returns one." }] },
     contents
   });
-  // Keep the first-token path lean: one short retry for temporary capacity errors only.
+
   let response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -88,6 +90,8 @@ async function streamOpenAI(messages: ChatMessage[]) {
   });
 }
 
+// Properly handles SSE frames, including CRLF, multi-line data fields and
+// the final frame that may not be followed by a newline.
 function parseSSE(response: Response, extract: (data: string) => string) {
   if (!response.body) throw new Error("Provider returned an empty stream.");
   return new ReadableStream<Uint8Array>({
@@ -95,21 +99,26 @@ function parseSSE(response: Response, extract: (data: string) => string) {
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      const processFrame = (frame: string) => {
+        const data = frame.split(/\r?\n/)
+          .filter(line => line.startsWith("data:"))
+          .map(line => line.slice(5).trimStart())
+          .join("\n").trim();
+        if (!data || data === "[DONE]") return;
+        const text = extract(data);
+        if (text) controller.enqueue(encoder.encode(text));
+      };
       try {
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-          for (const line of lines) {
-            if (!line.startsWith("data:")) continue;
-            const data = line.slice(5).trim();
-            if (!data || data === "[DONE]") continue;
-            const text = extract(data);
-            if (text) controller.enqueue(encoder.encode(text));
-          }
+          const frames = buffer.split(/\r?\n\r?\n/);
+          buffer = frames.pop() || "";
+          for (const frame of frames) processFrame(frame);
         }
+        buffer += decoder.decode();
+        if (buffer.trim()) processFrame(buffer);
         controller.close();
       } catch (error) {
         controller.error(error);
