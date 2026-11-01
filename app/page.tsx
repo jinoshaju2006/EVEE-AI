@@ -16,7 +16,7 @@ const starterPrompts = [
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [provider, setProvider] = useState<"gemini" | "openai">("gemini");
+  const [provider, setProvider] = useState<"gemini" | "openai">("openai");
   const [busy, setBusy] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [copied, setCopied] = useState("");
@@ -137,7 +137,7 @@ export default function Home() {
       <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="glass sticky top-0 z-20 flex h-[68px] items-center justify-between border-x-0 border-t-0 px-4 md:px-7">
           <div className="flex items-center gap-3"><button onClick={() => setSidebar(true)} className="text-slate-400 md:hidden"><Menu size={20}/></button><div className="text-sm font-semibold">EVEE <span className="text-violet-300">AI</span></div><span className="hidden sm:block text-xs text-slate-600">/</span><span className="hidden sm:block text-xs text-slate-400">Workspace</span></div>
-          <div className="flex items-center gap-2"><div className="relative"><select aria-label="AI provider" value={provider} onChange={e => setProvider(e.target.value as "gemini" | "openai")} className="glass appearance-none rounded-lg py-2 pl-3 pr-8 text-xs text-slate-300 outline-none"><option value="gemini">Gemini</option><option value="openai">OpenAI compatible</option></select><ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-2.5 text-slate-500"/></div><div className="hidden sm:flex items-center gap-1 rounded-lg border border-white/5 px-3 py-2 text-[10px] text-slate-500"><Command size={12}/> Private preview</div></div>
+          <div className="flex items-center gap-2"><div className="relative"><select aria-label="AI provider" value={provider} onChange={e => setProvider(e.target.value as "gemini" | "openai")} className="glass appearance-none rounded-lg py-2 pl-3 pr-8 text-xs text-slate-300 outline-none"><option value="gemini">Gemini (Manual)</option><option value="openai">OpenAI (Primary)</option></select><ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-2.5 text-slate-500"/></div><div className="hidden sm:flex items-center gap-1 rounded-lg border border-white/5 px-3 py-2 text-[10px] text-slate-500"><Command size={12}/> Private preview</div></div>
         </header>
 
         <section className="flex-1 overflow-y-auto px-4 pb-40 pt-8 md:px-8">
