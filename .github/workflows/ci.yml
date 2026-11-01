@@ -19,10 +19,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       - name: Generate Prisma client
         run: npx prisma generate
       - name: Build Next.js application
         run: npm run build
+      - name: Build Cloudflare Worker bundle
+        run: npx opennextjs-cloudflare build
