@@ -1,0 +1,29 @@
+name: EVEE AI build verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feature/chat-history-v2]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Build Next.js application
+        run: npm run build
+      - name: Build Cloudflare Worker bundle
+        run: npx opennextjs-cloudflare build

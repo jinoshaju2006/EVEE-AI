@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const messages = body.messages as ChatMessage[];
-    const provider = body.provider === "openai" ? "openai" : "gemini";
+    const provider = body.provider === "gemini" ? "gemini" : "openai";
 
     if (!Array.isArray(messages) || messages.length === 0 || messages.length > 40) {
       return Response.json({ error: "Send between 1 and 40 messages." }, { status: 400 });
@@ -19,9 +19,23 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Invalid message format or message too long." }, { status: 400 });
     }
 
-    const stream = provider === "openai"
-      ? await streamOpenAI(messages)
-      : await streamGemini(messages);
+    let stream: ReadableStream<Uint8Array>;
+    if (provider === "gemini") {
+      stream = await streamGemini(messages);
+    } else {
+      try {
+        stream = await streamOpenAI(messages);
+      } catch (openAIError) {
+        // OpenAI is the primary provider; automatically use Gemini if OpenAI is unavailable.
+        try {
+          stream = await streamGemini(messages);
+        } catch (geminiError) {
+          const openAIMessage = openAIError instanceof Error ? openAIError.message : "OpenAI request failed.";
+          const geminiMessage = geminiError instanceof Error ? geminiError.message : "Gemini fallback failed.";
+          throw new Error(`OpenAI failed (${openAIMessage}). Gemini fallback also failed (${geminiMessage}).`);
+        }
+      }
+    }
 
     return new Response(stream, {
       headers: {
