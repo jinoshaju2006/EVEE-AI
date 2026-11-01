@@ -284,7 +284,7 @@ private fun sendMessage(
 
 private suspend fun generateEveeImage(prompt: String): Pair<String, String> = withContext(Dispatchers.IO) {
     val payload = JSONObject().put("prompt", prompt).put("aspectRatio", "1:1")
-    val connection = (URL("https://evee-ai-q6d9.vercel.app/api/images").openConnection() as HttpURLConnection).apply {
+    val connection = (URL("https://evee-3ykf16mef-evee-ai.vercel.app/api/images").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         connectTimeout = 20000
         readTimeout = 180000
@@ -318,7 +318,7 @@ private suspend fun streamEvee(
         payloadMessages.put(JSONObject().put("role", message.role).put("content", message.content))
     }
     val payload = JSONObject().put("provider", provider).put("messages", payloadMessages)
-    val connection = (URL("https://evee-ai-q6d9.vercel.app/api/chat").openConnection() as HttpURLConnection).apply {
+    val connection = (URL("https://evee-3ykf16mef-evee-ai.vercel.app/api/chat").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         connectTimeout = 20000
         readTimeout = 120000
