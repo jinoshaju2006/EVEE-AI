@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
 
-type Message = { role: "user" | "assistant"; content: string; id: string };
+type Message = { role: "user" | "assistant"; content: string; id: string; image?: string };
 const starterPrompts = [
   { icon: "✦", title: "Learn something new", text: "Explain a complex topic in simple terms with examples." },
   { icon: "⌘", title: "Write or create", text: "Help me write something clear, engaging and professional." },
@@ -49,10 +49,24 @@ export default function Home() {
     if (!value || busy) return;
     const user: Message = { role: "user", content: value, id: crypto.randomUUID() };
     const next = [...messages, user];
-    const assistant: Message = { role: "assistant", content: "", id: crypto.randomUUID() };
+    const wantsImage = /\b(generate|create|draw|make)\b.{0,50}\b(image|picture|illustration|artwork|wallpaper)\b|\b(image|picture|illustration|artwork|wallpaper)\b.{0,50}\b(generate|create|draw|make)\b/i.test(value);
+    const assistant: Message = { role: "assistant", content: wantsImage ? "Creating your image…" : "", id: crypto.randomUUID() };
     setMessages([...next, assistant]); setInput(""); setBusy(true);
     const controller = new AbortController(); aborter.current = controller;
     try {
+      if (wantsImage) {
+        const imageResponse = await fetch("/api/images", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: value, aspectRatio: "1:1" }),
+          signal: controller.signal
+        });
+        const imageResult = await imageResponse.json();
+        if (!imageResponse.ok) throw new Error(imageResult.error || "Image generation failed.");
+        const completed = [...next, { ...assistant, content: imageResult.text || "Here is your image.", image: imageResult.image }];
+        setMessages(completed);
+        saveConversation(completed.map(m => ({ ...m, image: undefined })));
+        return;
+      }
       const response = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next.map(({ role, content }) => ({ role, content })), provider }),
@@ -123,7 +137,7 @@ export default function Home() {
             </div> : <div className="space-y-8 pt-5">{messages.map(m => <article key={m.id} className={m.role === "user" ? "flex justify-end" : "flex gap-3 md:gap-4"}>
               {m.role === "assistant" && <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500"><Bot size={17}/></div>}
               <div className={m.role === "user" ? "max-w-[85%] rounded-2xl rounded-br-md border border-violet-400/15 bg-violet-500/15 px-4 py-3 text-sm leading-7" : "min-w-0 flex-1 pt-1"}>
-                {m.role === "assistant" ? <><div className="markdown text-sm text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || (busy ? " " : "")}</ReactMarkdown>{!m.content && busy && <span className="inline-block h-4 w-1 animate-pulse bg-violet-300"/>}</div>{m.content && <div className="mt-3 flex gap-2"><button onClick={() => copy(m.id, m.content)} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-slate-200">{copied === m.id ? <Check size={13}/> : <Copy size={13}/>} {copied === m.id ? "Copied" : "Copy"}</button></div>}</> : m.content}
+                {m.role === "assistant" ? <><div className="markdown text-sm text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || (busy ? " " : "")}</ReactMarkdown>{!m.content && busy && <span className="inline-block h-4 w-1 animate-pulse bg-violet-300"/>}</div>{m.image && <img src={m.image} alt="AI-generated image" className="mt-3 max-h-[620px] w-full max-w-xl rounded-2xl border border-white/10 object-contain"/>}{m.content && <div className="mt-3 flex gap-2"><button onClick={() => copy(m.id, m.content)} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-slate-200">{copied === m.id ? <Check size={13}/> : <Copy size={13}/>} {copied === m.id ? "Copied" : "Copy"}</button></div>}</> : m.content}
               </div>
             </article>)}</div>}
             <div ref={bottom}/>
