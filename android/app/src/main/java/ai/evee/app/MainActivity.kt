@@ -269,7 +269,7 @@ private suspend fun streamEvee(
         payloadMessages.put(JSONObject().put("role", message.role).put("content", message.content))
     }
     val payload = JSONObject().put("provider", provider).put("messages", payloadMessages)
-    val connection = (URL("https://evee-ai.vercel.app/api/chat").openConnection() as HttpURLConnection).apply {
+    val connection = (URL("https://evee-ai-q6d9.vercel.app/api/chat").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         connectTimeout = 20000
         readTimeout = 120000
