@@ -38,18 +38,28 @@ export async function POST(req: NextRequest) {
 async function streamGemini(messages: ChatMessage[]) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("Gemini is not configured. Add GEMINI_API_KEY to the server environment.");
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-  const contents = messages.map(m => ({
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+  const contents = messages.slice(-20).map(m => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }]
   }));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
-  const init: RequestInit = { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify({ contents }), signal: AbortSignal.timeout(90000) };
-  let response = await fetch(url, init);
-  // Gemini may temporarily return 503/429 during demand spikes. Retry a few times.
-  for (let attempt = 1; attempt <= 2 && (response.status === 503 || response.status === 429); attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** (attempt - 1))));
-    response = await fetch(url, init);
+  const requestBody = JSON.stringify({ contents });
+  // Keep the first-token path lean: one short retry for temporary capacity errors only.
+  let response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: requestBody,
+    signal: AbortSignal.timeout(60000)
+  });
+  if (response.status === 503) {
+    await new Promise(resolve => setTimeout(resolve, 700));
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: requestBody,
+      signal: AbortSignal.timeout(60000)
+    });
   }
   if (!response.ok) throw new Error(`Gemini error (${response.status}): ${(await response.text()).slice(0, 500)}`);
   return parseSSE(response, data => {
