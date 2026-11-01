@@ -43,10 +43,14 @@ async function streamGemini(messages: ChatMessage[]) {
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }]
   }));
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
-    { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify({ contents }), signal: AbortSignal.timeout(90000) }
-  );
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+  const init: RequestInit = { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify({ contents }), signal: AbortSignal.timeout(90000) };
+  let response = await fetch(url, init);
+  // Gemini may temporarily return 503/429 during demand spikes. Retry a few times.
+  for (let attempt = 1; attempt <= 2 && (response.status === 503 || response.status === 429); attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** (attempt - 1))));
+    response = await fetch(url, init);
+  }
   if (!response.ok) throw new Error(`Gemini error (${response.status}): ${(await response.text()).slice(0, 500)}`);
   return parseSSE(response, data => {
     const parsed = JSON.parse(data);
