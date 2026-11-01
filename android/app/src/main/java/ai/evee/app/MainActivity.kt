@@ -235,13 +235,21 @@ private fun sendMessage(
     scope: kotlinx.coroutines.CoroutineScope
 ) {
     messages.add(ChatMessage("user", prompt))
+    val assistantIndex = messages.size
+    messages.add(ChatMessage("assistant", ""))
     setLoading(true)
     setError(null)
     scope.launch {
         try {
-            val reply = withContext(Dispatchers.IO) { requestEvee(messages.toList(), provider) }
-            messages.add(ChatMessage("assistant", reply))
+            streamEvee(messages.dropLast(1), provider) { chunk ->
+                val current = messages[assistantIndex]
+                messages[assistantIndex] = current.copy(content = current.content + chunk)
+            }
+            if (messages[assistantIndex].content.isBlank()) {
+                messages[assistantIndex] = ChatMessage("assistant", "EVEE returned an empty response. Please try again.")
+            }
         } catch (e: Exception) {
+            messages.removeAt(assistantIndex)
             setError(e.message ?: "Unable to reach EVEE AI. Please try again.")
         } finally {
             setLoading(false)
@@ -249,7 +257,11 @@ private fun sendMessage(
     }
 }
 
-private fun requestEvee(messages: List<ChatMessage>, provider: String): String {
+private suspend fun streamEvee(
+    messages: List<ChatMessage>,
+    provider: String,
+    onChunk: suspend (String) -> Unit
+) = withContext(Dispatchers.IO) {
     val payloadMessages = JSONArray()
     messages.forEach { message ->
         payloadMessages.put(JSONObject().put("role", message.role).put("content", message.content))
@@ -266,14 +278,19 @@ private fun requestEvee(messages: List<ChatMessage>, provider: String): String {
     try {
         connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
         val code = connection.responseCode
-        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
         if (code !in 200..299) {
+            val body = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
             val message = try { JSONObject(body).optString("error", body) } catch (_: Exception) { body }
             throw IllegalStateException("EVEE API ($code): $message")
         }
-        if (body.isBlank()) throw IllegalStateException("EVEE returned an empty response. Please try again.")
-        return body.trim()
+        connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+            val buffer = CharArray(1024)
+            while (true) {
+                val count = reader.read(buffer)
+                if (count < 0) break
+                if (count > 0) onChunk(String(buffer, 0, count))
+            }
+        }
     } finally {
         connection.disconnect()
     }
