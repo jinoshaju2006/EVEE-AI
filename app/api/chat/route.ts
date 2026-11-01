@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 async function streamGemini(messages: ChatMessage[]) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("Gemini is not configured. Add GEMINI_API_KEY to the server environment.");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
   const contents = messages.map(m => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }]
