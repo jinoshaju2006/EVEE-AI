@@ -49,7 +49,7 @@ export default function Home() {
     if (!value || busy) return;
     const user: Message = { role: "user", content: value, id: crypto.randomUUID() };
     const next = [...messages, user];
-    const wantsImage = /\b(generate|create|draw|make)\b.{0,50}\b(image|picture|illustration|artwork|wallpaper)\b|\b(image|picture|illustration|artwork|wallpaper)\b.{0,50}\b(generate|create|draw|make)\b/i.test(value);
+    const wantsImage = /\b(generate|create|draw|paint|design|make|produce)\b.{0,80}\b(image|picture|photo|illustration|artwork|wallpaper|poster|logo|thumbnail)\b|\b(image|picture|photo|illustration|artwork|wallpaper|poster|logo|thumbnail)\b.{0,80}\b(generate|create|draw|paint|design|make|produce)\b|\b(make|create|generate|draw|design)\s+(me\s+)?(a|an|some)\s+(visual|graphic|portrait|cover|banner|icon)\b|\b(turn|convert)\b.{0,40}\b(into|to)\b.{0,20}\b(image|picture|artwork)\b/i.test(value);
     const assistant: Message = { role: "assistant", content: wantsImage ? "Creating your image…" : "", id: crypto.randomUUID() };
     setMessages([...next, assistant]); setInput(""); setBusy(true);
     const controller = new AbortController(); aborter.current = controller;
