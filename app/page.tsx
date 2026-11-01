@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X, Trash2, Pencil } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; id: string; image?: string };
 const starterPrompts = [
@@ -21,6 +21,7 @@ export default function Home() {
   const [sidebar, setSidebar] = useState(false);
   const [copied, setCopied] = useState("");
   const [history, setHistory] = useState<{ id: string; title: string; messages: Message[] }[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const aborter = useRef<AbortController | null>(null);
@@ -41,7 +42,18 @@ export default function Home() {
     });
   }
 
-  function newChat() { aborter.current?.abort(); setMessages([]); setInput(""); setBusy(false); }
+  function newChat() { aborter.current?.abort(); setMessages([]); setInput(""); setBusy(false); setSidebar(false); }
+  function deleteChat(id: string) {
+    setHistory(old => { const updated = old.filter(chat => chat.id !== id); localStorage.setItem("evee-local-chats", JSON.stringify(updated)); return updated; });
+    if (messages[0]?.id === id) setMessages([]);
+  }
+  function renameChat(id: string) {
+    const current = history.find(chat => chat.id === id);
+    if (!current) return;
+    const title = window.prompt("Rename conversation", current.title)?.trim();
+    if (!title) return;
+    setHistory(old => { const updated = old.map(chat => chat.id === id ? { ...chat, title: title.slice(0, 60) } : chat); localStorage.setItem("evee-local-chats", JSON.stringify(updated)); return updated; });
+  }
   function openChat(id: string) { const item = history.find(c => c.id === id); if (item) setMessages(item.messages); setSidebar(false); }
 
   async function send(text = input) {
@@ -108,14 +120,15 @@ export default function Home() {
         <button onClick={newChat} className="mt-7 flex items-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-semibold shadow-lg shadow-violet-950/40 hover:brightness-110"><Plus size={17}/> New chat <span className="ml-auto text-xs opacity-60">⌘ K</span></button>
         <div className="mt-7 space-y-1">
           <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">Workspace</div>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><Search size={16}/> Search chats</button>
+          <label className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[.03] px-3 py-2.5 text-sm text-slate-400"><Search size={16}/><input aria-label="Search chats" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search chats..." className="min-w-0 w-full bg-transparent text-xs text-white outline-none placeholder:text-slate-500"/></label>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><WandSparkles size={16}/> Explore</button>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><Settings2 size={16}/> Settings <span className="ml-auto text-[10px] text-slate-600">SOON</span></button>
         </div>
         <div className="mt-8 flex-1 overflow-y-auto">
           <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">Recent conversations</div>
-          {history.map(chat => <button key={chat.id} onClick={() => openChat(chat.id)} className="w-full truncate rounded-lg px-3 py-2.5 text-left text-xs text-slate-400 hover:bg-white/5 hover:text-white"><MessageSquarePlus size={14} className="mr-2 inline-block"/>{chat.title}</button>)}
+          {history.filter(chat => `${chat.title} ${chat.messages.map(m => m.content).join(" ")}`.toLowerCase().includes(searchQuery.toLowerCase())).map(chat => <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-white/5"><button onClick={() => openChat(chat.id)} className="min-w-0 flex-1 truncate px-3 py-2.5 text-left text-xs text-slate-400 hover:text-white"><MessageSquarePlus size={14} className="mr-2 inline-block"/>{chat.title}</button><button aria-label={`Rename ${chat.title}`} title="Rename" onClick={() => renameChat(chat.id)} className="rounded p-1.5 text-slate-600 opacity-0 hover:text-violet-300 group-hover:opacity-100"><Pencil size={13}/></button><button aria-label={`Delete ${chat.title}`} title="Delete" onClick={() => deleteChat(chat.id)} className="mr-1 rounded p-1.5 text-slate-600 opacity-0 hover:text-red-400 group-hover:opacity-100"><Trash2 size={13}/></button></div>)}
           {!history.length && <p className="px-3 py-2 text-xs text-slate-600">Your chats will appear here.</p>}
+          {!!history.length && !history.some(chat => `${chat.title} ${chat.messages.map(m => m.content).join(" ")}`.toLowerCase().includes(searchQuery.toLowerCase())) && <p className="px-3 py-2 text-xs text-slate-600">No matching conversations.</p>}
         </div>
         <div className="glass rounded-xl p-3"><div className="flex items-center gap-2 text-xs font-semibold"><div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"/> EVEE systems</div><p className="mt-1 text-[10px] text-slate-500">Connect an AI provider to start chatting.</p></div>
         <div className="mt-3 flex items-center gap-3 rounded-xl p-2"><div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-400 to-blue-500 text-xs font-bold">E</div><div><div className="text-xs font-medium">EVO user</div><div className="text-[10px] text-slate-500">Local preview</div></div><PanelLeftClose size={16} className="ml-auto text-slate-600"/></div>
