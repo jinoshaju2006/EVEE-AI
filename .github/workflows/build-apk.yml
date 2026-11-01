@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p android/app/src/main/res/drawable-nodpi
           curl -fL https://raw.githubusercontent.com/jinoshaju2006/EVEE-AI/main/public/evee-app-icon.png -o android/app/src/main/res/drawable-nodpi/evee_app_icon.png
+          curl -fL https://raw.githubusercontent.com/jinoshaju2006/EVEE-AI/main/public/evee-ai-avatar.png.png -o android/app/src/main/res/drawable-nodpi/evee_ai_avatar.png
       - name: Build debug APK
         working-directory: android
         run: gradle assembleDebug
