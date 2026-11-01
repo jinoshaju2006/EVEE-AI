@@ -1,0 +1,9 @@
+{
+  "name": "EVEE AI",
+  "short_name": "EVEE AI",
+  "description": "Your Intelligence. Without Limits.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090b12",
+  "theme_color": "#090b12"
+}
