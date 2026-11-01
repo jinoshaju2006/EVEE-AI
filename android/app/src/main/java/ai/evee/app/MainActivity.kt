@@ -254,7 +254,7 @@ private fun sendMessage(
     setError(null)
     scope.launch {
         try {
-            val wantsImage = Regex("""\\b(generate|create|draw|make)\\b.{0,50}\\b(image|picture|illustration|artwork|wallpaper)\\b|\\b(image|picture|illustration|artwork|wallpaper)\\b.{0,50}\\b(generate|create|draw|make)\\b""", RegexOption.IGNORE_CASE).containsMatchIn(prompt)
+            val wantsImage = Regex("""\b(generate|create|draw|make)\b.{0,50}\b(image|picture|illustration|artwork|wallpaper)\b|\b(image|picture|illustration|artwork|wallpaper)\b.{0,50}\b(generate|create|draw|make)\b""", RegexOption.IGNORE_CASE).containsMatchIn(prompt)
             if (wantsImage) {
                 val generated = generateEveeImage(prompt)
                 withContext(Dispatchers.Main) {
