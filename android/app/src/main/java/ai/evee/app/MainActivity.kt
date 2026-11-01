@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -211,11 +212,12 @@ private fun MessageBubble(message: ChatMessage, purple: Color, panel: Color) {
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
         if (!isUser) {
-            Box(
-                modifier = Modifier.padding(top = 3.dp, end = 8.dp).size(30.dp)
-                    .background(Brush.linearGradient(listOf(purple, Color(0xFF5147D9))), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) { Text("✦", color = Color.White, fontSize = 17.sp) }
+            Image(
+                painter = painterResource(id = R.drawable.evee_ai_avatar),
+                contentDescription = "EVEE AI",
+                modifier = Modifier.padding(top = 3.dp, end = 8.dp).size(30.dp),
+                contentScale = ContentScale.Fit
+            )
         }
         Surface(
             color = if (isUser) Color(0xFF30204F) else panel,
