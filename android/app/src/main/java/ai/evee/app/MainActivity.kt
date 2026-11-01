@@ -242,8 +242,10 @@ private fun sendMessage(
     scope.launch {
         try {
             streamEvee(messages.dropLast(1), provider) { chunk ->
-                val current = messages[assistantIndex]
-                messages[assistantIndex] = current.copy(content = current.content + chunk)
+                withContext(Dispatchers.Main) {
+                    val current = messages[assistantIndex]
+                    messages[assistantIndex] = current.copy(content = current.content + chunk)
+                }
             }
             if (messages[assistantIndex].content.isBlank()) {
                 messages[assistantIndex] = ChatMessage("assistant", "EVEE returned an empty response. Please try again.")
