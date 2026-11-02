@@ -22,6 +22,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var progress: ProgressBar
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
     private val productionHost = "evee-3ykf16mef-evee-ai.vercel.app"
+    private val allowedAppHosts = setOf(
+        productionHost,
+        "evee-ai.vercel.app"
+    )
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +55,8 @@ class MainActivity : ComponentActivity() {
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val uri = request?.url ?: return false
-                    if (uri.scheme == "https" && uri.host == productionHost) return false
+                    // Keep EVEE's known Vercel deployment and canonical alias inside the app.
+                    if (uri.scheme == "https" && uri.host in allowedAppHosts) return false
                     if (uri.scheme == "http" || uri.scheme == "https") {
                         startActivity(Intent(Intent.ACTION_VIEW, uri))
                         return true
