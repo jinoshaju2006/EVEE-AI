@@ -55,13 +55,17 @@ class MainActivity : ComponentActivity() {
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val uri = request?.url ?: return false
-                    // Keep EVEE's known Vercel deployment and canonical alias inside the app.
-                    if (uri.scheme == "https" && uri.host in allowedAppHosts) return false
-                    if (uri.scheme == "http" || uri.scheme == "https") {
+                    // Keep all normal web navigation inside EVEE's app WebView.
+                    // This also handles Vercel deployment redirects and canonical host changes.
+                    if (uri.scheme == "https" || uri.scheme == "http") return false
+
+                    // Hand off non-web links (mailto:, tel:, etc.) to Android when supported.
+                    return try {
                         startActivity(Intent(Intent.ACTION_VIEW, uri))
-                        return true
+                        true
+                    } catch (_: Exception) {
+                        true
                     }
-                    return true
                 }
             }
             webChromeClient = object : WebChromeClient() {
