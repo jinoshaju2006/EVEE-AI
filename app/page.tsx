@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X, Instagram } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; id: string; image?: string };
 const starterPrompts = [
@@ -102,7 +102,7 @@ export default function Home() {
       {sidebar && <button aria-label="Close menu" onClick={() => setSidebar(false)} className="fixed inset-0 z-30 bg-black/60 md:hidden" />}
       <aside className={`glass fixed md:relative z-40 md:z-10 inset-y-0 left-0 w-[278px] flex flex-col p-4 border-y-0 border-l-0 transition-transform duration-300 ${sidebar ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <div className="flex items-center justify-between px-2 py-3">
-          <div className="flex items-center gap-3"><div className="h-9 w-9 rounded-xl grid place-items-center bg-gradient-to-br from-violet-500 to-blue-500 shadow-lg shadow-violet-500/20"><Sparkles size={19}/></div><div><div className="font-bold tracking-[.16em] text-[15px]">EVEE <span className="text-violet-300">AI</span></div><div className="text-[9px] tracking-[.22em] text-slate-500">BY EVO</div></div></div>
+          <div className="flex items-center gap-3"><img src="/evee-app-icon.png" alt="EVEE AI logo" className="h-9 w-9 rounded-xl object-contain shadow-lg shadow-violet-500/20" /><div><div className="font-bold tracking-[.16em] text-[15px]">EVEE <span className="text-violet-300">AI</span></div><div className="text-[9px] tracking-[.22em] text-slate-500">BY <span className="font-semibold text-red-500">EVO</span></div></div></div>
           <button onClick={() => setSidebar(false)} className="md:hidden text-slate-400"><X size={18}/></button>
         </div>
         <button onClick={newChat} className="mt-7 flex items-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-semibold shadow-lg shadow-violet-950/40 hover:brightness-110"><Plus size={17}/> New chat <span className="ml-auto text-xs opacity-60">⌘ K</span></button>
@@ -118,19 +118,20 @@ export default function Home() {
           {!history.length && <p className="px-3 py-2 text-xs text-slate-600">Your chats will appear here.</p>}
         </div>
         <div className="glass rounded-xl p-3"><div className="flex items-center gap-2 text-xs font-semibold"><div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"/> EVEE systems</div><p className="mt-1 text-[10px] text-slate-500">Connect an AI provider to start chatting.</p></div>
+        <a href="https://www.instagram.com/e.v_.o?vrfl=MTZvZGg2a2R6cmx5dA==" target="_blank" rel="noopener noreferrer" aria-label="Visit EVO on Instagram" className="mt-3 flex items-center gap-2 rounded-xl border border-white/5 px-3 py-2.5 text-xs text-slate-300 transition hover:border-red-500/30 hover:bg-white/5"><Instagram size={15} className="text-red-400"/> Instagram <span className="ml-auto text-[10px] text-slate-500">BY <span className="font-semibold text-red-500">EVO</span></span></a>
         <div className="mt-3 flex items-center gap-3 rounded-xl p-2"><div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-400 to-blue-500 text-xs font-bold">E</div><div><div className="text-xs font-medium">EVO user</div><div className="text-[10px] text-slate-500">Local preview</div></div><PanelLeftClose size={16} className="ml-auto text-slate-600"/></div>
       </aside>
 
       <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="glass sticky top-0 z-20 flex h-[68px] items-center justify-between border-x-0 border-t-0 px-4 md:px-7">
-          <div className="flex items-center gap-3"><button onClick={() => setSidebar(true)} className="text-slate-400 md:hidden"><Menu size={20}/></button><div className="text-sm font-semibold">EVEE <span className="text-violet-300">AI</span></div><span className="hidden sm:block text-xs text-slate-600">/</span><span className="hidden sm:block text-xs text-slate-400">Workspace</span></div>
+          <div className="flex items-center gap-3"><button onClick={() => setSidebar(true)} className="text-slate-400 md:hidden"><Menu size={20}/></button><img src="/evee-app-icon.png" alt="EVEE AI logo" className="h-7 w-7 rounded-lg object-contain"/><div className="text-sm font-semibold">EVEE <span className="text-violet-300">AI</span></div><span className="hidden sm:block text-xs text-slate-600">/</span><span className="hidden sm:block text-xs text-slate-400">Workspace</span></div>
           <div className="flex items-center gap-2"><div className="relative"><select aria-label="AI provider" value={provider} onChange={e => setProvider(e.target.value as "gemini" | "openai")} className="glass appearance-none rounded-lg py-2 pl-3 pr-8 text-xs text-slate-300 outline-none"><option value="gemini">Gemini</option><option value="openai">OpenAI compatible</option></select><ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-2.5 text-slate-500"/></div><div className="hidden sm:flex items-center gap-1 rounded-lg border border-white/5 px-3 py-2 text-[10px] text-slate-500"><Command size={12}/> Private preview</div></div>
         </header>
 
         <section className="flex-1 overflow-y-auto px-4 pb-40 pt-8 md:px-8">
           <div className="mx-auto max-w-[820px]">
             {messages.length === 0 ? <div className="flex min-h-[60vh] flex-col justify-center">
-              <div className="mb-7 flex items-center gap-2"><div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 grid place-items-center"><Sparkles size={16}/></div><span className="text-xs font-semibold tracking-[.2em] text-violet-200">A NEW KIND OF INTELLIGENCE</span></div>
+              <div className="mb-7 flex items-center gap-3"><img src="/evee-app-icon.png" alt="EVEE AI logo" className="h-10 w-10 rounded-xl object-contain shadow-lg shadow-violet-500/20"/><span className="text-xs font-semibold tracking-[.2em] text-violet-200">A NEW KIND OF INTELLIGENCE</span></div>
               <h1 className="max-w-2xl text-4xl font-semibold leading-[1.13] tracking-tight md:text-6xl">Your ideas deserve<br/><span className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-blue-300 bg-clip-text text-transparent">more intelligence.</span></h1>
               <p className="mt-5 max-w-lg text-sm leading-7 text-slate-400 md:text-base">Meet EVEE AI. Think clearly, create boldly and turn ambitious ideas into reality.</p>
               <div className="mt-12 grid gap-3 sm:grid-cols-2">{starterPrompts.map(p => <button key={p.title} onClick={() => setInput(p.text)} className="glass glow rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:border-violet-400/30"><div className="mb-3 text-lg text-violet-300">{p.icon}</div><div className="text-sm font-medium">{p.title}</div><div className="mt-1 text-xs leading-5 text-slate-500">{p.text}</div></button>)}</div>
@@ -150,7 +151,7 @@ export default function Home() {
               <textarea ref={textarea} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Message EVEE AI..." rows={2} className="max-h-40 min-h-[54px] w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-600"/>
               <div className="flex items-center justify-between px-1 pt-1"><div className="flex items-center gap-2 text-[10px] text-slate-600"><Sparkles size={13} className="text-violet-400"/> AI can make mistakes. Verify important information.</div><div className="flex items-center gap-2">{busy ? <button onClick={stop} className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Stop generating"><Square size={14}/></button> : <button onClick={() => send()} disabled={!input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-950/40 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30" aria-label="Send message"><ArrowUp size={18}/></button>}</div></div>
             </div>
-            <p className="mt-3 text-center text-[10px] tracking-wide text-slate-700">EVEE AI · YOUR INTELLIGENCE. WITHOUT LIMITS. · BY EVO</p>
+            <p className="mt-3 flex items-center justify-center gap-2 text-center text-[10px] tracking-wide text-slate-700"><img src="/evee-app-icon.png" alt="" className="h-4 w-4 rounded-sm object-contain" /> EVEE AI · YOUR INTELLIGENCE. WITHOUT LIMITS. · <a href="https://www.instagram.com/e.v_.o?vrfl=MTZvZGg2a2R6cmx5dA==" target="_blank" rel="noopener noreferrer" className="hover:underline"><span className="text-slate-400">BY </span><span className="font-semibold text-red-500">EVO</span><span className="text-slate-400"> · Instagram</span></a></p>
           </div>
         </div>
       </main>
