@@ -21,10 +21,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var progress: ProgressBar
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
-    private val productionHost = "evee-3ykf16mef-evee-ai.vercel.app"
+    private val productionHost = "evee-ai.vercel.app"
     private val allowedAppHosts = setOf(
         productionHost,
-        "evee-ai.vercel.app"
+        productionHost
     )
 
     @SuppressLint("SetJavaScriptEnabled")
