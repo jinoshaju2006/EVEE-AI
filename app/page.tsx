@@ -102,7 +102,7 @@ export default function Home() {
       {sidebar && <button aria-label="Close menu" onClick={() => setSidebar(false)} className="fixed inset-0 z-30 bg-black/60 md:hidden" />}
       <aside className={`glass fixed md:relative z-40 md:z-10 inset-y-0 left-0 w-[278px] flex flex-col p-4 border-y-0 border-l-0 transition-transform duration-300 ${sidebar ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <div className="flex items-center justify-between px-2 py-3">
-          <div className="flex items-center gap-3"><div className="h-9 w-9 rounded-xl grid place-items-center bg-gradient-to-br from-violet-500 to-blue-500 shadow-lg shadow-violet-500/20"><Sparkles size={19}/></div><div><div className="font-bold tracking-[.16em] text-[15px]">EVEE <span className="text-violet-300">AI</span></div><div className="text-[9px] tracking-[.22em] text-slate-500">BY EVO</div></div></div>
+          <div className="flex items-center gap-3"><img src="/evee-app-icon.png" alt="EVEE AI logo" className="h-9 w-9 rounded-xl object-contain shadow-lg shadow-violet-500/20" /><div><div className="font-bold tracking-[.16em] text-[15px]">EVEE <span className="text-violet-300">AI</span></div><div className="text-[9px] tracking-[.22em] text-slate-500">BY EVO</div></div></div>
           <button onClick={() => setSidebar(false)} className="md:hidden text-slate-400"><X size={18}/></button>
         </div>
         <button onClick={newChat} className="mt-7 flex items-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-semibold shadow-lg shadow-violet-950/40 hover:brightness-110"><Plus size={17}/> New chat <span className="ml-auto text-xs opacity-60">⌘ K</span></button>
