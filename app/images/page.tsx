@@ -4,12 +4,10 @@ import { useState } from "react";
 import { ArrowLeft, Download, Image as ImageIcon, LoaderCircle, Sparkles, WandSparkles } from "lucide-react";
 
 const ratios = ["1:1", "4:5", "5:4", "3:2", "2:3", "3:4", "4:3", "9:16", "16:9", "21:9"];
-const sizes = ["1K", "2K", "4K"];
 
 export default function ImageStudioPage() {
   const [prompt, setPrompt] = useState("");
   const [aspectRatio, setAspectRatio] = useState("1:1");
-  const [imageSize, setImageSize] = useState("1K");
   const [image, setImage] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
@@ -25,7 +23,7 @@ export default function ImageStudioPage() {
       const response = await fetch("/api/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), aspectRatio, imageSize })
+        body: JSON.stringify({ prompt: prompt.trim(), aspectRatio })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Image generation failed.");
@@ -52,18 +50,17 @@ export default function ImageStudioPage() {
         <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,.9fr)]">
           <section className="glass glow rounded-2xl p-4 md:p-6">
             <label htmlFor="image-prompt" className="text-sm font-medium">Describe your image</label>
-            <textarea id="image-prompt" value={prompt} onChange={e => setPrompt(e.target.value)} maxLength={4000} rows={7} placeholder="A cinematic photograph of a dark metallic sports car on a rain-soaked city street at night, dramatic reflections, premium automotive advertising..." className="mt-3 w-full resize-y rounded-xl border border-white/10 bg-[#090b12]/80 p-4 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400/50"/>
-            <div className="mt-1 text-right text-[10px] text-slate-600">{prompt.length}/4000</div>
+            <textarea id="image-prompt" value={prompt} onChange={e => setPrompt(e.target.value)} maxLength={2048} rows={7} placeholder="A cinematic photograph of a dark metallic sports car on a rain-soaked city street at night, dramatic reflections, premium automotive advertising..." className="mt-3 w-full resize-y rounded-xl border border-white/10 bg-[#090b12]/80 p-4 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400/50"/>
+            <div className="mt-1 text-right text-[10px] text-slate-600">{prompt.length}/2048</div>
 
             <div className="mt-5">
               <label className="text-sm font-medium">Aspect ratio</label>
               <div className="mt-2 flex flex-wrap gap-2">{ratios.map(ratio => <button key={ratio} type="button" onClick={() => setAspectRatio(ratio)} className={`rounded-lg border px-3 py-2 text-xs transition ${aspectRatio === ratio ? "border-violet-400/60 bg-violet-500/20 text-violet-100" : "border-white/10 bg-white/[.03] text-slate-400 hover:bg-white/[.07]"}`}>{ratio}</button>)}</div>
             </div>
 
-            <div className="mt-5">
-              <label htmlFor="image-size" className="text-sm font-medium">Output resolution</label>
-              <select id="image-size" value={imageSize} onChange={e => setImageSize(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#111625] px-3 py-3 text-sm text-slate-200 outline-none focus:border-violet-400/50">{sizes.map(size => <option key={size} value={size}>{size}</option>)}</select>
-              <p className="mt-2 text-[11px] leading-5 text-slate-500">Higher resolutions may take longer and use more provider quota. Availability depends on the selected Gemini model and API access.</p>
+            <div className="mt-5 rounded-xl border border-white/10 bg-white/[.03] p-3">
+              <p className="text-xs font-medium text-slate-300">Generation model</p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-500">FLUX.1 Schnell · Standard output size. Aspect ratio is guided through your prompt.</p>
             </div>
 
             <button type="button" onClick={generate} disabled={!prompt.trim() || busy} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3.5 text-sm font-semibold shadow-lg shadow-violet-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">{busy ? <><LoaderCircle size={17} className="animate-spin"/> Generating image…</> : <><WandSparkles size={17}/> Generate image</>}</button>
