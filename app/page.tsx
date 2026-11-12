@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Image as ImageIcon, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 
 type Message = { role: "user" | "assistant"; content: string; id: string; image?: string };
 const starterPrompts = [
@@ -109,7 +110,7 @@ export default function Home() {
         <div className="mt-7 space-y-1">
           <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">Workspace</div>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><Search size={16}/> Search chats</button>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><WandSparkles size={16}/> Explore</button>
+          <a href="/images" onClick={() => setSidebar(false)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><ImageIcon size={16}/> Image Studio <span className="ml-auto rounded-md bg-violet-500/15 px-2 py-0.5 text-[9px] text-violet-200">NEW</span></a>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><Settings2 size={16}/> Settings <span className="ml-auto text-[10px] text-slate-600">SOON</span></button>
         </div>
         <div className="mt-8 flex-1 overflow-y-auto">
@@ -118,7 +119,7 @@ export default function Home() {
           {!history.length && <p className="px-3 py-2 text-xs text-slate-600">Your chats will appear here.</p>}
         </div>
         <div className="glass rounded-xl p-3"><div className="flex items-center gap-2 text-xs font-semibold"><div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"/> EVEE systems</div><p className="mt-1 text-[10px] text-slate-500">Connect an AI provider to start chatting.</p></div>
-        <div className="mt-3 flex items-center gap-3 rounded-xl p-2"><div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-violet-400 to-blue-500 text-xs font-bold">E</div><div><div className="text-xs font-medium">EVO user</div><div className="text-[10px] text-slate-500">Local preview</div></div><PanelLeftClose size={16} className="ml-auto text-slate-600"/></div>
+        <div className="mt-3 flex items-center gap-3 rounded-xl p-2"><UserButton appearance={{ elements: { avatarBox: "h-9 w-9" } }} /><div className="min-w-0"><div className="text-xs font-medium">Your account</div><div className="text-[10px] text-slate-500">Signed in to EVEE AI</div></div><PanelLeftClose size={16} className="ml-auto text-slate-600"/></div>
       </aside>
 
       <main className="relative flex min-w-0 flex-1 flex-col">
@@ -137,7 +138,7 @@ export default function Home() {
             </div> : <div className="space-y-8 pt-5">{messages.map(m => <article key={m.id} className={m.role === "user" ? "flex justify-end" : "flex gap-3 md:gap-4"}>
               {m.role === "assistant" && <img src="/evee-ai-avatar.png.png" alt="EVEE AI" className="mt-1 h-8 w-8 shrink-0 rounded-full object-contain" />}
               <div className={m.role === "user" ? "max-w-[85%] rounded-2xl rounded-br-md border border-violet-400/15 bg-violet-500/15 px-4 py-3 text-sm leading-7" : "min-w-0 flex-1 pt-1"}>
-                {m.role === "assistant" ? <><div className="markdown text-sm text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || (busy ? " " : "")}</ReactMarkdown>{!m.content && busy && <span className="inline-block h-4 w-1 animate-pulse bg-violet-300"/>}</div>{m.image && <img src={m.image} alt="AI-generated image" className="mt-3 max-h-[620px] w-full max-w-xl rounded-2xl border border-white/10 object-contain"/>}{m.content && <div className="mt-3 flex gap-2"><button onClick={() => copy(m.id, m.content)} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-slate-200">{copied === m.id ? <Check size={13}/> : <Copy size={13}/>} {copied === m.id ? "Copied" : "Copy"}</button></div>}</> : m.content}
+                {m.role === "assistant" ? <><div className="markdown text-sm text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || (busy ? " " : "")}</ReactMarkdown>{!m.content && busy && <span className="inline-block h-4 w-1 animate-pulse bg-violet-300"/>}</div>{m.image && <div className="relative mt-3 w-full max-w-xl"><img src={m.image} alt="AI-generated image" className="max-h-[620px] w-full rounded-2xl border border-white/10 object-contain"/><img src="/evee-ai-watermark.svg" alt="EVEE AI watermark" aria-hidden="true" className="pointer-events-none absolute bottom-3 right-3 w-[16%] min-w-[54px] max-w-[100px] opacity-35 drop-shadow-[0_1px_5px_rgba(0,0,0,.8)]"/></div>}{m.content && <div className="mt-3 flex gap-2"><button onClick={() => copy(m.id, m.content)} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-slate-200">{copied === m.id ? <Check size={13}/> : <Copy size={13}/>} {copied === m.id ? "Copied" : "Copy"}</button></div>}</> : m.content}
               </div>
             </article>)}</div>}
             <div ref={bottom}/>
@@ -148,7 +149,7 @@ export default function Home() {
           <div className="mx-auto max-w-[820px]">
             <div className="glass glow rounded-[22px] p-3">
               <textarea ref={textarea} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Message EVEE AI..." rows={2} className="max-h-40 min-h-[54px] w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-600"/>
-              <div className="flex items-center justify-between px-1 pt-1"><div className="flex items-center gap-2 text-[10px] text-slate-600"><Sparkles size={13} className="text-violet-400"/> AI can make mistakes. Verify important information.</div><div className="flex items-center gap-2">{busy ? <button onClick={stop} className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Stop generating"><Square size={14}/></button> : <button onClick={() => send()} disabled={!input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-950/40 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30" aria-label="Send message"><ArrowUp size={18}/></button>}</div></div>
+              <div className="flex items-center justify-between px-1 pt-1"><div className="flex items-center gap-2"><a href="/images" title="Open Image Studio" aria-label="Open Image Studio" className="grid h-9 w-9 place-items-center rounded-xl border border-violet-400/20 bg-violet-500/10 text-violet-200 transition hover:border-violet-300/40 hover:bg-violet-500/20"><ImageIcon size={17}/></a><div className="flex items-center gap-2 text-[10px] text-slate-600"><Sparkles size={13} className="text-violet-400"/> AI can make mistakes. Verify important information.</div></div><div className="flex items-center gap-2">{busy ? <button onClick={stop} className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Stop generating"><Square size={14}/></button> : <button onClick={() => send()} disabled={!input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-950/40 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30" aria-label="Send message"><ArrowUp size={18}/></button>}</div></div>
             </div>
             <p className="mt-3 text-center text-[10px] tracking-wide text-slate-700">EVEE AI · YOUR INTELLIGENCE. WITHOUT LIMITS. · BY EVO</p>
           </div>
