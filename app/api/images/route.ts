@@ -3,84 +3,75 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type GeminiPart = {
-  text?: string;
-  inlineData?: { mimeType?: string; data?: string };
-  inline_data?: { mime_type?: string; data?: string };
-};
-
 const ALLOWED_RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"];
+
+type CloudflareImageResponse = {
+  success?: boolean;
+  errors?: Array<{ message?: string }>;
+  result?: { image?: string };
+};
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const prompt = body?.prompt;
-    const aspectRatio = body?.aspectRatio || "1:1";
-    const requestedSize = body?.imageSize || "1K";
+    const requestedRatio = body?.aspectRatio || "1:1";
 
-    if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 4000) {
-      return Response.json({ error: "Enter an image prompt (maximum 4,000 characters)." }, { status: 400 });
+    if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 2048) {
+      return Response.json({ error: "Enter an image prompt (maximum 2,048 characters)." }, { status: 400 });
     }
 
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) {
-      return Response.json({ error: "Image generation is not configured. Add GEMINI_API_KEY to Vercel." }, { status: 503 });
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    if (!accountId || !apiToken) {
+      return Response.json(
+        { error: "Image generation is not configured. Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the Vercel environment variables." },
+        { status: 503 }
+      );
     }
 
-    // Gemini 3.1 Flash Image is the recommended general-purpose image model.
-    const model = process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image";
-    const ratio = ALLOWED_RATIOS.includes(aspectRatio) ? aspectRatio : "1:1";
-    const imageSize = ["1K", "2K", "4K"].includes(requestedSize) ? requestedSize : "1K";
+    const ratio = ALLOWED_RATIOS.includes(requestedRatio) ? requestedRatio : "1:1";
+    // FLUX.1 Schnell has no native aspect-ratio or resolution input; pass the composition as prompt guidance.
+    const composedPrompt = `${prompt.trim()}\nComposition: create the image in a ${ratio} aspect-ratio composition.`;
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/@cf/black-forest-labs/flux-1-schnell`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt.trim() }] }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-            imageConfig: { aspectRatio: ratio, imageSize }
-          }
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({ prompt: composedPrompt, steps: 4 }),
         signal: AbortSignal.timeout(180000)
       }
     );
 
     const raw = await response.text();
-    if (!response.ok) {
-      let detail = raw;
-      try {
-        const parsed = JSON.parse(raw);
-        detail = parsed.error?.message || raw;
-      } catch {}
+    let data: CloudflareImageResponse = {};
+    try {
+      data = JSON.parse(raw) as CloudflareImageResponse;
+    } catch {
+      return Response.json({ error: "Cloudflare returned an unreadable response. Please try again later." }, { status: 502 });
+    }
+
+    if (!response.ok || data.success === false) {
+      const detail = data.errors?.map(item => item.message).filter(Boolean).join("; ") || "Image generation request failed.";
+      const status = response.status === 429 ? 429 : response.status >= 400 && response.status < 500 ? response.status : 502;
       return Response.json(
-        { error: `Gemini image error (${response.status}): ${detail.slice(0, 700)}` },
-        { status: response.status >= 400 && response.status < 600 ? response.status : 502 }
+        { error: response.status === 429 ? "Cloudflare's free daily AI allowance or rate limit has been reached. Please try again after the limit resets." : `Cloudflare image error (${response.status}): ${detail.slice(0, 500)}` },
+        { status }
       );
     }
 
-    const data = JSON.parse(raw);
-    const parts: GeminiPart[] = data.candidates?.flatMap(
-      (candidate: { content?: { parts?: GeminiPart[] } }) => candidate.content?.parts || []
-    ) || [];
-    const imagePart = parts.find(part => part.inlineData?.data || part.inline_data?.data);
-    const imageData = imagePart?.inlineData?.data || imagePart?.inline_data?.data;
-    const mimeType = imagePart?.inlineData?.mimeType || imagePart?.inline_data?.mime_type || "image/png";
-    const text = parts.map(part => part.text).filter(Boolean).join("\n");
-
+    const imageData = data.result?.image;
     if (!imageData) {
-      const blockReason = data.promptFeedback?.blockReason;
-      const finishReason = data.candidates?.[0]?.finishReason;
-      const message = blockReason
-        ? `The image request was blocked by Gemini safety filters (${blockReason}). Try a different prompt.`
-        : `Gemini returned no image (finish reason: ${finishReason || "unknown"}). Check model access and API quota.`;
-      return Response.json({ error: message }, { status: 502 });
+      return Response.json({ error: "Cloudflare did not return an image. Please try again." }, { status: 502 });
     }
 
     return Response.json({
-      image: `data:${mimeType};base64,${imageData}`,
-      text: text || "Here is your generated image."
+      image: `data:image/jpeg;base64,${imageData}`,
+      text: "Image generated with Cloudflare FLUX.1 Schnell."
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Image generation failed.";
