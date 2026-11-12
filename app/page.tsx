@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Image as ImageIcon, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Image as ImageIcon, Menu, MessageSquarePlus, PanelLeftClose, Paperclip, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 
 type Message = { role: "user" | "assistant"; content: string; id: string; image?: string };
@@ -21,6 +21,8 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [copied, setCopied] = useState("");
+  const [attachedImage, setAttachedImage] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<{ id: string; title: string; messages: Message[] }[]>([]);
   const bottom = useRef<HTMLDivElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -47,14 +49,28 @@ export default function Home() {
 
   async function send(text = input) {
     const value = text.trim();
-    if (!value || busy) return;
-    const user: Message = { role: "user", content: value, id: crypto.randomUUID() };
+    if ((!value && !attachedImage) || busy) return;
+    const imageToEdit = attachedImage;
+    const user: Message = { role: "user", content: value || "Please edit this image.", id: crypto.randomUUID(), image: imageToEdit || undefined };
     const next = [...messages, user];
     const wantsImage = /\b(generate|create|draw|paint|design|make|produce)\b.{0,80}\b(image|picture|photo|illustration|artwork|wallpaper|poster|logo|thumbnail)\b|\b(image|picture|photo|illustration|artwork|wallpaper|poster|logo|thumbnail)\b.{0,80}\b(generate|create|draw|paint|design|make|produce)\b|\b(make|create|generate|draw|design)\s+(me\s+)?(a|an|some)\s+(visual|graphic|portrait|cover|banner|icon)\b|\b(turn|convert)\b.{0,40}\b(into|to)\b.{0,20}\b(image|picture|artwork)\b/i.test(value);
-    const assistant: Message = { role: "assistant", content: wantsImage ? "Creating your image…" : "", id: crypto.randomUUID() };
+    const assistant: Message = { role: "assistant", content: imageToEdit ? "Editing your image…" : wantsImage ? "Creating your image…" : "", id: crypto.randomUUID() };
     setMessages([...next, assistant]); setInput(""); setBusy(true);
     const controller = new AbortController(); aborter.current = controller;
     try {
+      if (imageToEdit) {
+        const blob = await (await fetch(imageToEdit)).blob();
+        const form = new FormData();
+        form.append("prompt", value || "Improve this image while preserving its main subject.");
+        form.append("image", blob, "evee-upload.png");
+        const editResponse = await fetch("/api/images/edit", { method: "POST", body: form, signal: controller.signal });
+        const editResult = await editResponse.json();
+        if (!editResponse.ok) throw new Error(editResult.error || "Image editing failed.");
+        const completed = [...next, { ...assistant, content: editResult.text || "Your edited image is ready.", image: editResult.image }];
+        setMessages(completed); setAttachedImage("");
+        saveConversation(completed.map(m => ({ ...m, image: undefined })));
+        return;
+      }
       if (wantsImage) {
         const imageResponse = await fetch("/api/images", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -94,7 +110,6 @@ export default function Home() {
       }
     } finally { setBusy(false); aborter.current = null; }
   }
-
   function stop() { aborter.current?.abort(); setBusy(false); }
   async function copy(id: string, content: string) { await navigator.clipboard.writeText(content); setCopied(id); setTimeout(() => setCopied(""), 1500); }
 
@@ -138,7 +153,7 @@ export default function Home() {
             </div> : <div className="space-y-8 pt-5">{messages.map(m => <article key={m.id} className={m.role === "user" ? "flex justify-end" : "flex gap-3 md:gap-4"}>
               {m.role === "assistant" && <img src="/evee-ai-avatar.png.png" alt="EVEE AI" className="mt-1 h-8 w-8 shrink-0 rounded-full object-contain" />}
               <div className={m.role === "user" ? "max-w-[85%] rounded-2xl rounded-br-md border border-violet-400/15 bg-violet-500/15 px-4 py-3 text-sm leading-7" : "min-w-0 flex-1 pt-1"}>
-                {m.role === "assistant" ? <><div className="markdown text-sm text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || (busy ? " " : "")}</ReactMarkdown>{!m.content && busy && <span className="inline-block h-4 w-1 animate-pulse bg-violet-300"/>}</div>{m.image && <div className="relative mt-3 w-full max-w-xl"><img src={m.image} alt="AI-generated image" className="max-h-[620px] w-full rounded-2xl border border-white/10 object-contain"/><img src="/evee-ai-watermark.svg" alt="EVEE AI watermark" aria-hidden="true" className="pointer-events-none absolute bottom-3 right-3 w-[16%] min-w-[54px] max-w-[100px] opacity-35 drop-shadow-[0_1px_5px_rgba(0,0,0,.8)]"/></div>}{m.content && <div className="mt-3 flex gap-2"><button onClick={() => copy(m.id, m.content)} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-slate-200">{copied === m.id ? <Check size={13}/> : <Copy size={13}/>} {copied === m.id ? "Copied" : "Copy"}</button></div>}</> : m.content}
+                {m.role === "assistant" ? <><div className="markdown text-sm text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || (busy ? " " : "")}</ReactMarkdown>{!m.content && busy && <span className="inline-block h-4 w-1 animate-pulse bg-violet-300"/>}</div>{m.image && <div className="relative mt-3 w-full max-w-xl"><img src={m.image} alt="AI-generated image" className="max-h-[620px] w-full rounded-2xl border border-white/10 object-contain"/><img src="/evee-ai-watermark.svg" alt="EVEE AI watermark" aria-hidden="true" className="pointer-events-none absolute bottom-3 right-3 w-[16%] min-w-[54px] max-w-[100px] opacity-35 drop-shadow-[0_1px_5px_rgba(0,0,0,.8)]"/><button onClick={() => { setAttachedImage(m.image || ""); setInput("Edit this image: "); textarea.current?.focus(); }} className="mt-2 inline-flex items-center gap-2 rounded-lg border border-violet-400/20 bg-violet-500/10 px-3 py-2 text-xs text-violet-200 hover:bg-violet-500/20"><WandSparkles size={14}/> Edit this image</button></div>}{m.content && <div className="mt-3 flex gap-2"><button onClick={() => copy(m.id, m.content)} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-slate-200">{copied === m.id ? <Check size={13}/> : <Copy size={13}/>} {copied === m.id ? "Copied" : "Copy"}</button></div>}</> : <>{m.content}{m.image && <img src={m.image} alt="Uploaded image" className="mt-3 max-h-64 max-w-full rounded-xl object-contain"/>}</>}
               </div>
             </article>)}</div>}
             <div ref={bottom}/>
@@ -148,8 +163,8 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#090b12] via-[#090b12f5] to-transparent px-4 pb-5 pt-12 md:px-8">
           <div className="mx-auto max-w-[820px]">
             <div className="glass glow rounded-[22px] p-3">
-              <textarea ref={textarea} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Message EVEE AI..." rows={2} className="max-h-40 min-h-[54px] w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-600"/>
-              <div className="flex items-center justify-between px-1 pt-1"><div className="flex items-center gap-2"><a href="/images" title="Open Image Studio" aria-label="Open Image Studio" className="grid h-9 w-9 place-items-center rounded-xl border border-violet-400/20 bg-violet-500/10 text-violet-200 transition hover:border-violet-300/40 hover:bg-violet-500/20"><ImageIcon size={17}/></a><div className="flex items-center gap-2 text-[10px] text-slate-600"><Sparkles size={13} className="text-violet-400"/> AI can make mistakes. Verify important information.</div></div><div className="flex items-center gap-2">{busy ? <button onClick={stop} className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Stop generating"><Square size={14}/></button> : <button onClick={() => send()} disabled={!input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-950/40 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30" aria-label="Send message"><ArrowUp size={18}/></button>}</div></div>
+              {attachedImage && <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.04] p-2"><img src={attachedImage} alt="Image ready to edit" className="h-16 w-16 rounded-lg object-cover"/><div className="min-w-0 flex-1"><p className="text-xs font-medium text-slate-200">Image attached</p><p className="text-[10px] text-slate-500">Describe the changes you want</p></div><button type="button" onClick={() => setAttachedImage("")} aria-label="Remove attached image" className="rounded-lg p-2 text-slate-400 hover:bg-white/10"><X size={16}/></button></div>}\n              <textarea ref={textarea} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Message EVEE AI..." rows={2} className="max-h-40 min-h-[54px] w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-600"/>
+              <div className="flex items-center justify-between px-1 pt-1"><div className="flex items-center gap-2"><input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 8 * 1024 * 1024) { setMessages(current => [...current, { role: "assistant", id: crypto.randomUUID(), content: "Please choose an image smaller than 8 MB." }]); e.target.value = ""; return; } const reader = new FileReader(); reader.onload = () => setAttachedImage(String(reader.result || "")); reader.readAsDataURL(file); e.target.value = ""; }} /><button type="button" onClick={() => fileInput.current?.click()} title="Upload an image" aria-label="Upload an image" className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[.03] text-slate-300 transition hover:bg-white/10"><Paperclip size={17}/></button><a href="/images" title="Open Image Studio" aria-label="Open Image Studio" className="grid h-9 w-9 place-items-center rounded-xl border border-violet-400/20 bg-violet-500/10 text-violet-200 transition hover:border-violet-300/40 hover:bg-violet-500/20"><ImageIcon size={17}/></a><div className="flex items-center gap-2 text-[10px] text-slate-600"><Sparkles size={13} className="text-violet-400"/> AI can make mistakes. Verify important information.</div></div><div className="flex items-center gap-2">{busy ? <button onClick={stop} className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Stop generating"><Square size={14}/></button> : <button onClick={() => send()} disabled={!input.trim() && !attachedImage} className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-950/40 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30" aria-label="Send message"><ArrowUp size={18}/></button>}</div></div>
             </div>
             <p className="mt-3 text-center text-[10px] tracking-wide text-slate-700">EVEE AI · YOUR INTELLIGENCE. WITHOUT LIMITS. · BY EVO</p>
           </div>
