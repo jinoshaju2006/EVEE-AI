@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
     if (!(image instanceof File)) {
       return Response.json({ error: "Choose an image to edit." }, { status: 400 });
     }
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(image.type)) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(image.type)) {
       return Response.json({ error: "Upload a JPG, PNG, or WebP image." }, { status: 400 });
     }
     if (image.size > 8 * 1024 * 1024) {
@@ -35,21 +34,18 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Image editing is not configured. Check the Cloudflare account settings in Vercel." }, { status: 503 });
     }
 
-    const imageBase64 = Buffer.from(await image.arrayBuffer()).toString("base64");
+    // FLUX.2 [klein] accepts image references through multipart/form-data.
+    // Keep the original image as a binary reference so the model can edit it.
+    const cloudflareForm = new FormData();
+    cloudflareForm.append("prompt", prompt.trim());
+    cloudflareForm.append("input_image_0", image, image.name || "upload-image");
+
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/@cf/runwayml/stable-diffusion-v1-5-img2img`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/@cf/black-forest-labs/flux-2-klein-4b`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiToken}`
-        },
-        body: JSON.stringify({
-          prompt: prompt.trim(),
-          image_b64: imageBase64,
-          strength: 0.7,
-          num_steps: 20
-        }),
+        headers: { Authorization: `Bearer ${apiToken}` },
+        body: cloudflareForm,
         signal: AbortSignal.timeout(180000)
       }
     );
@@ -61,16 +57,27 @@ export async function POST(req: NextRequest) {
     } catch {
       return Response.json({ error: "Cloudflare returned an unreadable response. Please try again." }, { status: 502 });
     }
+
     if (!response.ok || data.success === false) {
       const detail = data.errors?.map(item => item.message).filter(Boolean).join("; ") || "Image editing request failed.";
+      if (response.status === 403) {
+        return Response.json({
+          error: "Cloudflare denied access to the image-editing model. Check that Workers AI is enabled for this account and that the API token has Workers AI:Run permission. If access is still denied, the model may not be enabled for this account."
+        }, { status: 403 });
+      }
       const status = response.status === 429 ? 429 : response.status >= 400 && response.status < 500 ? response.status : 502;
-      return Response.json({ error: response.status === 429 ? "The image service is busy or its usage limit has been reached. Please try again later." : `Cloudflare image editing error (${response.status}): ${detail.slice(0, 400)}` }, { status });
+      return Response.json({
+        error: response.status === 429
+          ? "The image service is busy or its usage limit has been reached. Please try again later."
+          : `Cloudflare image editing error (${response.status}): ${detail.slice(0, 400)}`
+      }, { status });
     }
 
     const imageData = data.result?.image;
     if (!imageData) {
       return Response.json({ error: "The image service returned no edited image. Please try again." }, { status: 502 });
     }
+
     return Response.json({ image: `data:image/png;base64,${imageData}`, text: "Your image has been edited." });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Image editing failed.";
