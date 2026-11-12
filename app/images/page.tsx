@@ -13,6 +13,37 @@ export default function ImageStudioPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  async function downloadWatermarked() {
+    if (!image) return;
+    const base = new window.Image();
+    base.src = image;
+    await new Promise<void>((resolve, reject) => { base.onload = () => resolve(); base.onerror = () => reject(new Error("Could not prepare image download.")); });
+    const mark = new window.Image();
+    mark.src = "/evee-ai-watermark.svg";
+    await new Promise<void>((resolve, reject) => { mark.onload = () => resolve(); mark.onerror = () => reject(new Error("Could not load EVEE watermark.")); });
+    const canvas = document.createElement("canvas");
+    canvas.width = base.naturalWidth;
+    canvas.height = base.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(base, 0, 0);
+    const width = Math.round(canvas.width * 0.16);
+    const height = Math.round(width * (mark.naturalHeight / mark.naturalWidth));
+    const margin = Math.round(canvas.width * 0.025);
+    ctx.globalAlpha = 0.35;
+    ctx.drawImage(mark, canvas.width - width - margin, canvas.height - height - margin, width, height);
+    ctx.globalAlpha = 1;
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "evee-ai-watermarked-image.png";
+      link.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }
+
   async function generate() {
     if (!prompt.trim() || busy) return;
     setBusy(true);
@@ -72,7 +103,7 @@ export default function ImageStudioPage() {
             <div className="mt-4 flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/10 bg-[#090b12]/65 p-3">
               {image ? <div className="relative inline-block max-w-full"><img src={image} alt="AI-generated artwork" className="max-h-[650px] max-w-full rounded-lg object-contain"/><img src="/evee-ai-watermark.svg" alt="EVEE AI watermark" aria-hidden="true" className="pointer-events-none absolute bottom-3 right-3 w-[16%] min-w-[54px] max-w-[100px] opacity-35 drop-shadow-[0_1px_5px_rgba(0,0,0,.8)]"/></div> : busy ? <div className="text-center"><LoaderCircle size={30} className="mx-auto animate-spin text-violet-300"/><p className="mt-3 text-sm text-slate-300">Creating your image</p><p className="mt-1 text-xs text-slate-600">This can take a little while.</p></div> : <div className="max-w-xs text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-violet-500/10 text-violet-300"><Sparkles size={24}/></div><p className="mt-4 text-sm font-medium text-slate-300">Your image will appear here</p><p className="mt-2 text-xs leading-5 text-slate-600">Enter a prompt and select Generate image to get started.</p></div>}
             </div>
-            {image && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="min-w-0 flex-1 text-xs text-slate-400">{description}</p><a href={image} download={`evee-ai-image-${Date.now()}.png`} className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/15"><Download size={14}/> Save image</a></div>}
+            {image && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="min-w-0 flex-1 text-xs text-slate-400">{description}</p><button type="button" onClick={downloadWatermarked} className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/15"><Download size={14}/> Save image</button></div>}
           </section>
         </div>
         <p className="mt-8 text-center text-[10px] tracking-wide text-slate-700">EVEE AI · YOUR INTELLIGENCE. WITHOUT LIMITS. · BY EVO</p>
