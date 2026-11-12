@@ -119,7 +119,7 @@ export default function Home() {
           {!history.length && <p className="px-3 py-2 text-xs text-slate-600">Your chats will appear here.</p>}
         </div>
         <div className="glass rounded-xl p-3"><div className="flex items-center gap-2 text-xs font-semibold"><div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"/> EVEE systems</div><p className="mt-1 text-[10px] text-slate-500">Connect an AI provider to start chatting.</p></div>
-        <div className="mt-3 flex items-center gap-3 rounded-xl p-2"><UserButton afterSignOutUrl="/sign-in" appearance={{ elements: { avatarBox: "h-9 w-9" } }} /><div className="min-w-0"><div className="text-xs font-medium">Your account</div><div className="text-[10px] text-slate-500">Signed in to EVEE AI</div></div><PanelLeftClose size={16} className="ml-auto text-slate-600"/></div>
+        <div className="mt-3 flex items-center gap-3 rounded-xl p-2"><UserButton appearance={{ elements: { avatarBox: "h-9 w-9" } }} /><div className="min-w-0"><div className="text-xs font-medium">Your account</div><div className="text-[10px] text-slate-500">Signed in to EVEE AI</div></div><PanelLeftClose size={16} className="ml-auto text-slate-600"/></div>
       </aside>
 
       <main className="relative flex min-w-0 flex-1 flex-col">
