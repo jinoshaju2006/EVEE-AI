@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const prompt = body?.prompt;
     const aspectRatio = body?.aspectRatio || "1:1";
+    const requestedSize = body?.imageSize || "1K";
 
     if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 4000) {
       return Response.json({ error: "Enter an image prompt (maximum 4,000 characters)." }, { status: 400 });
@@ -26,9 +27,10 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Image generation is not configured. Add GEMINI_API_KEY to Vercel." }, { status: 503 });
     }
 
-    // Nano Banana 2.1 is the documented default image model.
-    const model = process.env.GEMINI_IMAGE_MODEL || "gemini-nano-banana-2.1";
+    // Gemini 3.1 Flash Image is the recommended general-purpose image model.
+    const model = process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image";
     const ratio = ALLOWED_RATIOS.includes(aspectRatio) ? aspectRatio : "1:1";
+    const imageSize = ["1K", "2K", "4K"].includes(requestedSize) ? requestedSize : "1K";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(model)}:generateContent`,
       {
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
           contents: [{ role: "user", parts: [{ text: prompt.trim() }] }],
           generationConfig: {
             responseModalities: ["TEXT", "IMAGE"],
-            imageConfig: { aspectRatio: ratio, imageSize: "1K" }
+            imageConfig: { aspectRatio: ratio, imageSize }
           }
         }),
         signal: AbortSignal.timeout(180000)
