@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, Command, Copy, Image as ImageIcon, Menu, MessageSquarePlus, PanelLeftClose, Plus, Search, Settings2, Sparkles, Square, WandSparkles, X } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; id: string; image?: string };
 const starterPrompts = [
@@ -109,7 +109,7 @@ export default function Home() {
         <div className="mt-7 space-y-1">
           <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">Workspace</div>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><Search size={16}/> Search chats</button>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><WandSparkles size={16}/> Explore</button>
+          <a href="/images" onClick={() => setSidebar(false)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><ImageIcon size={16}/> Image Studio <span className="ml-auto rounded-md bg-violet-500/15 px-2 py-0.5 text-[9px] text-violet-200">NEW</span></a>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5"><Settings2 size={16}/> Settings <span className="ml-auto text-[10px] text-slate-600">SOON</span></button>
         </div>
         <div className="mt-8 flex-1 overflow-y-auto">
